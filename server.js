@@ -16,18 +16,23 @@ app.get('/stream', (req, res) => {
     const torrentUrl = req.query.torrentUrl;
 
     if (!torrentUrl) {
+        console.error('No torrent URL provided');
         return res.status(400).send('Torrent URL is required');
     }
 
     try {
+        console.log(`Adding torrent: ${torrentUrl}`);
         client.add(torrentUrl, torrent => {
+            console.log(`Torrent added: ${torrent.infoHash}`);
             const file = torrent.files.find(file => file.name.endsWith('.mp4'));
 
             if (!file) {
+                console.error('No .mp4 file found in the torrent');
                 torrent.destroy();
                 return res.status(404).send('No streamable file found in the torrent');
             }
 
+            console.log(`Streaming file: ${file.name}`);
             res.setHeader('Content-Type', 'video/mp4');
             const stream = file.createReadStream();
             let responseSent = false;
@@ -43,6 +48,7 @@ app.get('/stream', (req, res) => {
             });
 
             res.on('close', () => {
+                console.log('Response closed, destroying torrent');
                 torrent.destroy();
             });
         });
@@ -52,8 +58,4 @@ app.get('/stream', (req, res) => {
             res.status(500).send('Failed to process the torrent');
         }
     }
-});
-
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running on port ${PORT}`);
 });
